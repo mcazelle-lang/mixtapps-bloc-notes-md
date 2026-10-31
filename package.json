@@ -1,0 +1,15 @@
+{
+  "name": "mixtapps-bloc-notes-md",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Le Bloc-notes de Mr Basic, version dev : écris en Markdown et vois le rendu en direct, en édition, en aperçu ou côte à côte. Export en .md.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.3.0"
+  }
+}

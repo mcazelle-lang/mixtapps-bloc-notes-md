@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bloc-notes Markdown</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📓</text></svg>">
+<style>
+  :root { --accent: #a78bfa; --accent-vif: #c4b5fd; --fond: #0f0d17; --panneau: #17142380; --carte: #1b1729; --bordure: #2e2842; --texte: #e9e5f5; --doux: #a29cb8; --danger: #f87171; --rayon: 8px;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); line-height: 1.5; display: flex; flex-direction: column; min-height: 100vh; }
+  button, input, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent-vif); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .entete { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1.25rem; border-bottom: 1px solid var(--bordure); background: linear-gradient(90deg, #1d1530, var(--fond)); }
+  .entete h1 { margin: 0; font: 700 1.1rem var(--mono); }
+  .entete h1 span { color: var(--accent); }
+  .btn { border: 1px solid var(--bordure); background: var(--carte); border-radius: var(--rayon); padding: .5rem .85rem; cursor: pointer; font-size: .9rem; }
+  .btn:hover { border-color: var(--accent); }
+  .btn-principal { background: var(--accent); border-color: var(--accent); color: #160f2b; font-weight: 700; font-family: var(--mono); }
+  .btn-principal:hover { background: var(--accent-vif); }
+  .btn-danger { color: var(--danger); }
+  .btn-danger-plein { background: var(--danger); border-color: var(--danger); color: #1a0b0b; font-weight: 700; }
+  .app { flex: 1; display: grid; grid-template-columns: 1fr; }
+  @media (min-width: 820px) { .app { grid-template-columns: 280px 1fr; } }
+  .liste { border-bottom: 1px solid var(--bordure); padding: 1rem; background: var(--panneau); display: flex; flex-direction: column; gap: .75rem; max-height: 42vh; overflow: auto; }
+  @media (min-width: 820px) { .liste { border-bottom: 0; border-right: 1px solid var(--bordure); max-height: none; } }
+  #recherche { width: 100%; padding: .5rem .7rem; border: 1px solid var(--bordure); border-radius: var(--rayon); background: var(--fond); font-family: var(--mono); font-size: .9rem; }
+  #liste-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .3rem; }
+  .note-item { width: 100%; text-align: left; border: 1px solid transparent; background: transparent; border-radius: var(--rayon); padding: .55rem .7rem; cursor: pointer; display: block; }
+  .note-item:hover { background: var(--carte); }
+  .note-item[aria-current="true"] { background: var(--carte); border-color: var(--accent); }
+  .note-item-titre { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note-item-titre::before { content: "# "; content: "# " / ""; color: var(--accent); font-family: var(--mono); }
+  .note-item-extrait, .note-item-date { display: block; font-size: .8rem; color: var(--doux); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .note-item-date { font-family: var(--mono); }
+  .vide { color: var(--doux); font-size: .9rem; text-align: center; padding: 1rem 0; margin: 0; }
+  .editeur { display: flex; flex-direction: column; padding: 1.25rem; min-height: 60vh; }
+  .zone-edition { display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+  .ligne-titre { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; justify-content: space-between; }
+  .champ-titre { flex: 1; min-width: 14rem; }
+  .champ-label { display: block; font: .75rem var(--mono); color: var(--doux); }
+  #note-titre { border: 0; border-bottom: 1px solid var(--bordure); font-size: 1.4rem; font-weight: 700; padding: .2rem 0 .4rem; width: 100%; background: transparent; }
+  .vues { display: inline-flex; border: 1px solid var(--bordure); border-radius: var(--rayon); overflow: hidden; }
+  .vues button { border: 0; background: transparent; padding: .45rem .75rem; cursor: pointer; font: .85rem var(--mono); color: var(--doux); }
+  .vues button[aria-pressed="true"] { background: var(--accent); color: #160f2b; font-weight: 700; }
+  .espace { flex: 1; display: grid; gap: .75rem; grid-template-columns: 1fr; min-height: 45vh; }
+  .espace[data-vue="cote"] { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .espace[data-vue="edition"] .zone-apercu, .espace[data-vue="apercu"] .zone-texte { display: none; }
+  .zone-texte, .zone-apercu { display: flex; flex-direction: column; gap: .3rem; min-height: 45vh; }
+  #note-contenu { flex: 1; border: 1px solid var(--bordure); border-radius: var(--rayon); padding: .9rem; resize: vertical; background: #0b0a12; font: .95rem/1.6 var(--mono); }
+  #apercu { flex: 1; border: 1px solid var(--bordure); border-radius: var(--rayon); padding: .4rem 1.1rem; background: var(--carte); overflow: auto; overflow-wrap: anywhere; }
+  #apercu h1, #apercu h2, #apercu h3 { margin: .9rem 0 .4rem; line-height: 1.25; }
+  #apercu h1 { font-size: 1.6rem; border-bottom: 1px solid var(--bordure); padding-bottom: .3rem; }
+  #apercu h2 { font-size: 1.3rem; } #apercu h3 { font-size: 1.1rem; color: var(--accent-vif); }
+  #apercu code { font-family: var(--mono); background: #2a2340; padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+  #apercu pre { background: #0b0a12; border: 1px solid var(--bordure); border-radius: var(--rayon); padding: .8rem; overflow-x: auto; }
+  #apercu pre code { background: none; padding: 0; }
+  #apercu blockquote { margin: .75rem 0; padding: .2rem 1rem; border-left: 3px solid var(--accent); color: var(--doux); }
+  #apercu a { color: var(--accent-vif); }
+  .barre-outils { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin-top: .5rem; }
+  .infos { flex: 1; min-width: 12rem; font: .8rem var(--mono); color: var(--doux); margin: 0; }
+  .confirmation { border: 1px solid #7f1d1d; background: #2a1215; border-radius: var(--rayon); padding: .75rem 1rem; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .5rem; }
+  .confirmation p { margin: 0; flex: 1; min-width: 12rem; }
+  .pied { padding: .75rem 1.25rem; font: .8rem var(--mono); color: var(--doux); border-top: 1px solid var(--bordure); text-align: center; }
+</style>
+</head>
+<body>
+<header class="entete">
+  <h1><span>~/</span>notes<span>.md</span></h1>
+  <button type="button" id="btn-nouvelle" class="btn btn-principal">+ nouvelle note</button>
+</header>
+<div class="app">
+  <aside class="liste" aria-label="Tes notes">
+    <label for="recherche" class="sr-only">Rechercher dans tes notes</label>
+    <input type="search" id="recherche" placeholder="grep…" autocomplete="off">
+    <ul id="liste-notes"></ul>
+    <p id="liste-vide" class="vide" hidden>Aucune note trouvée.</p>
+  </aside>
+  <main class="editeur" id="editeur">
+    <p id="editeur-vide" class="vide" hidden>Pas encore de note ici. Clique sur « nouvelle note » pour commencer !</p>
+    <section id="zone-edition" class="zone-edition" aria-label="Édition de la note">
+      <div class="ligne-titre">
+        <div class="champ-titre">
+          <label for="note-titre" class="champ-label">titre</label>
+          <input type="text" id="note-titre" maxlength="120" placeholder="Sans titre" autocomplete="off">
+        </div>
+        <div class="vues" role="group" aria-label="Mode d’affichage">
+          <button type="button" id="btn-vue-edition" data-vue="edition" aria-pressed="false">Édition</button>
+          <button type="button" id="btn-vue-apercu" data-vue="apercu" aria-pressed="false">Aperçu</button>
+          <button type="button" id="btn-vue-cote" data-vue="cote" aria-pressed="true">Côte à côte</button>
+        </div>
+      </div>
+      <div id="espace" class="espace" data-vue="cote">
+        <div class="zone-texte">
+          <label for="note-contenu" class="champ-label">contenu (Markdown)</label>
+          <textarea id="note-contenu" spellcheck="false" placeholder="# Écris en **Markdown** ici…"></textarea>
+        </div>
+        <div class="zone-apercu">
+          <span class="champ-label" id="label-apercu">aperçu</span>
+          <article id="apercu" aria-labelledby="label-apercu"></article>
+        </div>
+      </div>
+      <div class="barre-outils">
+        <p class="infos"><span id="note-date"></span> <span id="statut-sauvegarde" aria-live="polite"></span></p>
+        <button type="button" id="btn-exporter" class="btn">Exporter en .md</button>
+        <button type="button" id="btn-supprimer" class="btn btn-danger">Supprimer</button>
+      </div>
+      <div id="confirmation-suppression" class="confirmation" role="group" aria-labelledby="confirmation-texte" hidden>
+        <p id="confirmation-texte">rm cette note ? C’est définitif.</p>
+        <button type="button" id="btn-annuler-suppression" class="btn">Annuler</button>
+        <button type="button" id="btn-confirmer-suppression" class="btn btn-danger-plein">Oui, supprimer</button>
+      </div>
+    </section>
+  </main>
+</div>
+<footer class="pied">Bloc-notes Markdown · par Lucas Bernard · Remix du Bloc-notes de Mr Basic</footer>
+
+<script>
+(function () {
+  'use strict';
+  const CLE = 'bloc-notes-md:v1';
+  const $ = (sel) => document.querySelector(sel);
+  const el = {
+    liste: $('#liste-notes'), listeVide: $('#liste-vide'), recherche: $('#recherche'), zone: $('#zone-edition'),
+    vide: $('#editeur-vide'), titre: $('#note-titre'), contenu: $('#note-contenu'), apercu: $('#apercu'), espace: $('#espace'),
+    date: $('#note-date'), statut: $('#statut-sauvegarde'), confirmation: $('#confirmation-suppression'),
+    btnNouvelle: $('#btn-nouvelle'), btnSupprimer: $('#btn-supprimer'), btnAnnuler: $('#btn-annuler-suppression')
+  };
+  const formatDate = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium', timeStyle: 'short' });
+  function nouvelId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function normaliser(t) { return String(t).normalize('NFD').replace(/\p{M}/gu, '').toLowerCase(); }
+
+  // --- Rendu Markdown maison et sûr : tout le HTML est échappé AVANT la mise en forme ---
+  const JETON = String.fromCharCode(1);
+  function escapeHtml(t) {
+    return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function enLigne(texte) {
+    const reserves = [];
+    const garder = (html) => JETON + (reserves.push(html) - 1) + JETON;
+    let s = escapeHtml(texte);
+    s = s.replace(/`([^`]+)`/g, (_, code) => garder('<code>' + code + '</code>'));
+    // Liens : uniquement http(s), ouverts dans un nouvel onglet sans accès à la page
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_, txt, url) => garder('<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + txt + '</a>'));
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>');
+    const motif = new RegExp(JETON + '(\\d+)' + JETON, 'g');
+    for (let i = 0; i < 5 && s.includes(JETON); i++) s = s.replace(motif, (_, n) => reserves[Number(n)]);
+    return s;
+  }
+  function rendreMarkdown(source) {
+    const lignes = source.split(JETON).join('').replace(/\r\n?/g, '\n').split('\n');
+    let html = '', liste = null, paragraphe = [], citation = [];
+    const fermerParagraphe = () => { if (paragraphe.length) html += '<p>' + paragraphe.map(enLigne).join('<br>') + '</p>'; paragraphe = []; };
+    const fermerCitation = () => { if (citation.length) html += '<blockquote><p>' + citation.map(enLigne).join('<br>') + '</p></blockquote>'; citation = []; };
+    const fermerListe = () => { if (liste) html += '</' + liste + '>'; liste = null; };
+    const toutFermer = () => { fermerParagraphe(); fermerCitation(); fermerListe(); };
+    const ouvrirListe = (type) => { fermerParagraphe(); fermerCitation(); if (liste !== type) { fermerListe(); html += '<' + type + '>'; liste = type; } };
+    for (let i = 0; i < lignes.length; i++) {
+      const ligne = lignes[i];
+      let m;
+      if (/^\s*```/.test(ligne)) { // bloc de code : contenu échappé, aucune mise en forme
+        toutFermer();
+        const code = [];
+        while (++i < lignes.length && !/^\s*```/.test(lignes[i])) code.push(lignes[i]);
+        html += '<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>';
+      } else if (!ligne.trim()) toutFermer();
+      else if ((m = ligne.match(/^(#{1,3})\s+(.+)$/))) { toutFermer(); html += '<h' + m[1].length + '>' + enLigne(m[2]) + '</h' + m[1].length + '>'; }
+      else if ((m = ligne.match(/^>\s?(.*)$/))) { fermerParagraphe(); fermerListe(); citation.push(m[1]); }
+      else if ((m = ligne.match(/^\s*[-*+]\s+(.*)$/))) { ouvrirListe('ul'); html += '<li>' + enLigne(m[1]) + '</li>'; }
+      else if ((m = ligne.match(/^\s*\d+[.)]\s+(.*)$/))) { ouvrirListe('ol'); html += '<li>' + enLigne(m[1]) + '</li>'; }
+      else { fermerListe(); fermerCitation(); paragraphe.push(ligne); }
+    }
+    toutFermer();
+    return html || '<p class="vide">Rien à afficher pour l’instant.</p>';
+  }
+
+  // --- Stockage local (protégé : le localStorage peut être bloqué) ---
+  function charger() {
+    try {
+      const data = JSON.parse(localStorage.getItem(CLE));
+      if (data && Array.isArray(data.notes)) return data;
+    } catch (e) { /* stockage indisponible ou données illisibles */ }
+    return null;
+  }
+  let etat = charger() || {
+    notes: [{ id: nouvelId(), titre: 'README', modifieLe: Date.now(),
+      contenu: '# Salut 👾\n\nCe bloc-notes comprend le **Markdown** :\n\n- *italique*, **gras** et `code`\n- des [liens](https://developer.mozilla.org)\n\n> Les citations aussi.\n\n```\nconsole.log("et les blocs de code");\n```\n\n1. Écris à gauche\n2. Admire à droite' }],
+    selection: null, vue: 'cote'
+  };
+  let minuterie = null, enAttente = false;
+  function sauvegarder() {
+    clearTimeout(minuterie);
+    enAttente = false;
+    try { localStorage.setItem(CLE, JSON.stringify(etat)); if (el.statut.textContent) el.statut.textContent = '· enregistré'; }
+    catch (e) { el.statut.textContent = '· sauvegarde impossible (stockage bloqué)'; }
+  }
+  function sauvegarderBientot() {
+    el.statut.textContent = '· enregistrement…';
+    enAttente = true;
+    clearTimeout(minuterie);
+    minuterie = setTimeout(sauvegarder, 400);
+  }
+  function notesTriees() { return etat.notes.slice().sort((a, b) => b.modifieLe - a.modifieLe); }
+  function noteActive() { return etat.notes.find((n) => n.id === etat.selection) || null; }
+
+  // --- Liste des notes (textContent uniquement) ---
+  function afficherListe() {
+    const filtre = normaliser(el.recherche.value.trim());
+    const notes = notesTriees().filter((n) => !filtre || normaliser(n.titre + ' ' + n.contenu).includes(filtre));
+    el.liste.replaceChildren();
+    notes.forEach((n) => {
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'note-item';
+      btn.dataset.id = n.id;
+      if (n.id === etat.selection) btn.setAttribute('aria-current', 'true');
+      [['note-item-titre', n.titre.trim() || 'Sans titre'], ['note-item-extrait', n.contenu.trim().slice(0, 80) || 'Note vide'],
+        ['note-item-date', formatDate.format(n.modifieLe)]].forEach(([classe, texte]) => {
+        const span = document.createElement('span');
+        span.className = classe;
+        span.textContent = texte;
+        btn.append(span);
+      });
+      li.append(btn);
+      el.liste.append(li);
+    });
+    el.listeVide.hidden = notes.length > 0;
+    el.listeVide.textContent = etat.notes.length ? 'Aucune note ne correspond à ta recherche.' : 'Aucune note pour l’instant.';
+  }
+
+  function afficherDate(note) { el.date.textContent = 'modifiée le ' + formatDate.format(note.modifieLe); }
+  function afficherApercu() { el.apercu.innerHTML = rendreMarkdown(el.contenu.value); } // sortie déjà échappée
+  function afficherEditeur() {
+    const note = noteActive();
+    el.zone.hidden = !note;
+    el.vide.hidden = !!note;
+    el.confirmation.hidden = true;
+    if (!note) return;
+    el.titre.value = note.titre;
+    el.contenu.value = note.contenu;
+    el.statut.textContent = '';
+    afficherDate(note);
+    afficherApercu();
+  }
+  function choisirVue(vue) {
+    etat.vue = ['edition', 'apercu', 'cote'].includes(vue) ? vue : 'cote';
+    el.espace.dataset.vue = etat.vue;
+    document.querySelectorAll('.vues button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.vue === etat.vue)));
+  }
+  function selectionner(id) {
+    if (enAttente) sauvegarder();
+    etat.selection = id;
+    afficherListe();
+    afficherEditeur();
+    sauvegarder();
+  }
+
+  // --- Actions ---
+  function creerNote() {
+    const note = { id: nouvelId(), titre: '', contenu: '', modifieLe: Date.now() };
+    etat.notes.push(note);
+    el.recherche.value = '';
+    selectionner(note.id);
+    el.titre.focus();
+  }
+  function majNote() {
+    const note = noteActive();
+    if (!note) return;
+    note.titre = el.titre.value;
+    note.contenu = el.contenu.value;
+    note.modifieLe = Date.now();
+    afficherDate(note);
+    afficherListe();
+    afficherApercu();
+    sauvegarderBientot();
+  }
+  function supprimerNote() {
+    etat.notes = etat.notes.filter((n) => n.id !== etat.selection);
+    const suivante = notesTriees()[0];
+    selectionner(suivante ? suivante.id : null);
+    el.statut.textContent = '';
+    (suivante ? el.titre : el.btnNouvelle).focus();
+  }
+  function exporter() {
+    const note = noteActive();
+    if (!note) return;
+    const base = normaliser(note.titre).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'note';
+    const url = URL.createObjectURL(new Blob([note.contenu], { type: 'text/markdown;charset=utf-8' }));
+    const lien = document.createElement('a');
+    lien.href = url;
+    lien.download = base + '.md';
+    document.body.append(lien);
+    lien.click();
+    lien.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    el.statut.textContent = '· fichier exporté';
+  }
+
+  // --- Événements ---
+  el.btnNouvelle.addEventListener('click', creerNote);
+  el.liste.addEventListener('click', (e) => {
+    const bouton = e.target.closest('.note-item');
+    if (!bouton) return;
+    selectionner(bouton.dataset.id);
+    const actif = el.liste.querySelector('[data-id="' + bouton.dataset.id + '"]');
+    if (actif) actif.focus();
+  });
+  el.recherche.addEventListener('input', afficherListe);
+  el.titre.addEventListener('input', majNote);
+  el.contenu.addEventListener('input', majNote);
+  document.querySelectorAll('.vues button').forEach((b) => b.addEventListener('click', () => { choisirVue(b.dataset.vue); sauvegarder(); }));
+  $('#btn-exporter').addEventListener('click', exporter);
+  el.btnSupprimer.addEventListener('click', () => { el.confirmation.hidden = false; el.btnAnnuler.focus(); });
+  el.btnAnnuler.addEventListener('click', () => { el.confirmation.hidden = true; el.btnSupprimer.focus(); });
+  $('#btn-confirmer-suppression').addEventListener('click', supprimerNote);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !el.confirmation.hidden) { el.confirmation.hidden = true; el.btnSupprimer.focus(); }
+  });
+  window.addEventListener('pagehide', () => { if (enAttente) sauvegarder(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && enAttente) sauvegarder(); });
+
+  // --- Démarrage ---
+  if (!noteActive()) etat.selection = notesTriees()[0] ? notesTriees()[0].id : null;
+  choisirVue(etat.vue);
+  afficherListe();
+  afficherEditeur();
+})();
+</script>
+<script src="https://appmixtape.web.app/remix.js" data-app="NTD5a3qElKRJszaujOhRq3slGBR2/cqfvnH4odMU4MAEm5OrE" defer></script>
+</body>
+</html>
